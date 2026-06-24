@@ -17,7 +17,7 @@ public:
 
     int operator[](int i)
     {
-        
+        ;
     }
 };
 
