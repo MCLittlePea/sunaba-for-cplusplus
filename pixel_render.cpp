@@ -10,10 +10,8 @@ static int s_width = 100;
 static int s_height = 100;
 static uint8_t* s_framebuffer = NULL;
 static HWND s_hWnd = NULL;
-static HANDLE s_thread = NULL;
 static bool s_running = false;
 static bool s_class_registered = false;
-static CRITICAL_SECTION s_cs;
 
 static void init_buffer(void)
 {
@@ -39,14 +37,11 @@ void set_pixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
 {
     if (!s_framebuffer) return;
     if (x < 0 || x >= s_width || y < 0 || y >= s_height) return;
-
-    EnterCriticalSection(&s_cs);
     int idx = (y * s_width + x) * 4;
     s_framebuffer[idx + 0] = b;
     s_framebuffer[idx + 1] = g;
     s_framebuffer[idx + 2] = r;
     s_framebuffer[idx + 3] = 255;
-    LeaveCriticalSection(&s_cs);
 }
 
 static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -64,12 +59,8 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
         bmi.bmiHeader.biPlanes = 1;
         bmi.bmiHeader.biBitCount = 32;
         bmi.bmiHeader.biCompression = BI_RGB;
-
-        EnterCriticalSection(&s_cs);
         StretchDIBits(hdc, 0, 0, s_width, s_height, 0, 0, s_width, s_height,
             s_framebuffer, &bmi, DIB_RGB_COLORS, SRCCOPY);
-        LeaveCriticalSection(&s_cs);
-
         EndPaint(hWnd, &ps);
         return 0;
     }
@@ -81,11 +72,12 @@ static LRESULT CALLBACK WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPara
     }
 }
 
-static DWORD WINAPI WindowThread(LPVOID)
+void create_window(void)
 {
+    if (s_running) return;
+    init_buffer();
     HINSTANCE hInstance = GetModuleHandleA(NULL);
     const char* class_name = "PixelRenderWindow";
-
     if (!s_class_registered)
     {
         WNDCLASSA wc = {0};
@@ -96,64 +88,43 @@ static DWORD WINAPI WindowThread(LPVOID)
         RegisterClassA(&wc);
         s_class_registered = true;
     }
-
     RECT rc = {0, 0, s_width, s_height};
     AdjustWindowRect(&rc, WS_OVERLAPPEDWINDOW, FALSE);
-
     s_hWnd = CreateWindowA(class_name, "Pixel Window", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, rc.right - rc.left, rc.bottom - rc.top,
         NULL, NULL, hInstance, NULL);
-
     ShowWindow(s_hWnd, SW_SHOW);
     UpdateWindow(s_hWnd);
-
-    MSG msg;
-    while (s_running)
-    {
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-        {
-            if (msg.message == WM_QUIT)
-            {
-                s_running = false;
-                break;
-            }
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-
-        // 自动刷新画面，约60帧
-        InvalidateRect(s_hWnd, NULL, FALSE);
-        UpdateWindow(s_hWnd);
-        Sleep(16);
-    }
-
-    DestroyWindow(s_hWnd);
-    s_hWnd = NULL;
-    return 0;
+    s_running = true;
 }
 
-void create_window(void)
+bool update_window(void)
 {
-    if (s_running) return;
-
-    init_buffer();
-    InitializeCriticalSection(&s_cs);
-    s_running = true;
-
-    s_thread = CreateThread(NULL, 0, WindowThread, NULL, 0, NULL);
+    if (!s_running || !s_hWnd) return false;
+    MSG msg;
+    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+    {
+        if (msg.message == WM_QUIT)
+        {
+            s_running = false;
+            return false;
+        }
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    InvalidateRect(s_hWnd, NULL, FALSE);
+    UpdateWindow(s_hWnd);
+    return true;
 }
 
 void destroy_window(void)
 {
-    if (!s_running) return;
-
+    if (s_hWnd)
+    {
+        DestroyWindow(s_hWnd);
+        s_hWnd = NULL;
+    }
     s_running = false;
-    WaitForSingleObject(s_thread, INFINITE);
-    CloseHandle(s_thread);
-    s_thread = NULL;
-
-    DeleteCriticalSection(&s_cs);
-
     if (s_framebuffer)
     {
         free(s_framebuffer);
