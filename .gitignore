@@ -1,12 +1,9 @@
-# CLion 配置
 .idea/
 *.iml
 
-# CMake 构建目录
 cmake-build-*/
 build/
 
-# 编译产物
 *.o
 *.obj
 *.a
@@ -14,7 +11,6 @@ build/
 *.exe
 *.dll
 
-# 临时文件
 *.log
 *.tmp
 Thumbs.db
