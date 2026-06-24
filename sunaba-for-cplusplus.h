@@ -15,9 +15,10 @@ public:
     SunabaProgram& operator=(const SunabaProgram&) = default;
     ~SunabaProgram() = default;
 
-    int operator[](int i)
+    int& operator[](int i)
     {
         ;
+        return mem[i];
     }
 };
 
