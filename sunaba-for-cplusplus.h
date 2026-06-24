@@ -18,7 +18,6 @@ public:
     int& operator[](int i)
     {
         ;
-        return mem[i];
     }
 };
 
