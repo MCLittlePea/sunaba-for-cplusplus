@@ -114,7 +114,7 @@ inline void SunabaProgram::sync_pixels()
         for (int x = 0; x < 100; ++x)
         {
             int c = mem[60000 + y * 100 + x];
-            set_pixel(x, y, c / 10000, (c / 100) % 100, c % 100);
+            set_pixel(x, y, (uint8_t)(c / 10000), (uint8_t)((c / 100) % 100), (uint8_t)(c % 100));
         }
 }
 
