@@ -9,7 +9,7 @@ class SunabaProgram
 {
 private:
     static constexpr int MXmem = 70000;
-    int mem[MXmem];
+    int mem[MXmem]{};
 
     enum class Permission
     {
@@ -43,7 +43,7 @@ private:
     bool m_running = false;
     bool m_auto_sync = true;
     bool m_need_sync = false;
-    CRITICAL_SECTION m_cs;
+    CRITICAL_SECTION m_cs{};
 
 public:
     SunabaProgram() = default;
@@ -114,7 +114,7 @@ inline void SunabaProgram::sync_pixels()
         for (int x = 0; x < 100; ++x)
         {
             int c = mem[60000 + y * 100 + x];
-            set_pixel(x, y, (uint8_t)(c / 10000), (uint8_t)((c / 100) % 100), (uint8_t)(c % 100));
+            set_pixel(x, y, static_cast<uint8_t>(c / 10000), static_cast<uint8_t>((c / 100) % 100), static_cast<uint8_t>(c % 100));
         }
 }
 

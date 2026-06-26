@@ -8,6 +8,7 @@
 
 static int s_width = 100;
 static int s_height = 100;
+static int s_scale = 4;
 static uint8_t* s_framebuffer = NULL;
 static HWND s_hwnd = NULL;
 static bool s_running = false;
@@ -22,7 +23,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     {
         PAINTSTRUCT ps;
         HDC hdc = BeginPaint(hwnd, &ps);
-        StretchDIBits(hdc, 0, 0, s_width, s_height, 0, 0, s_width, s_height,
+        SetStretchBltMode(hdc, COLORONCOLOR);
+        StretchDIBits(hdc, 0, 0, s_width * s_scale, s_height * s_scale, 0, 0, s_width, s_height,
             s_framebuffer, &s_bmi, DIB_RGB_COLORS, SRCCOPY);
         EndPaint(hwnd, &ps);
         return 0;
@@ -40,6 +42,12 @@ void set_window_size(int width, int height)
     if (s_running) return;
     s_width = width;
     s_height = height;
+}
+
+void set_scale(int scale)
+{
+    if (s_running) return;
+    s_scale = scale;
 }
 
 void set_pixel(int x, int y, uint8_t r, uint8_t g, uint8_t b)
@@ -79,7 +87,7 @@ void create_window(void)
         s_class_registered = true;
     }
 
-    RECT rect = {0, 0, s_width, s_height};
+    RECT rect = {0, 0, s_width * s_scale, s_height * s_scale};
     AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
     s_hwnd = CreateWindowExA(0, class_name, "Pixel Window", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, rect.right - rect.left, rect.bottom - rect.top,
